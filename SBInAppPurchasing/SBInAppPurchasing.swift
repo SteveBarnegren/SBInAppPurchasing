@@ -21,12 +21,13 @@ let SBInAppPurchaseFailed = "SBInAppPurchaseFailed"
 
 @objc public class SBInAppPurchasing: NSObject {
     
-    static let sharedInstance = SBInAppPurchasing()
+    public static let sharedInstance = SBInAppPurchasing()
     public var delegate: SBInAppPurchasingDelegate?
+    public let debugLoggingEnabled = true
 
     private var productsRequest: SKProductsRequest?
-    public var products: [SKProduct] = [SKProduct]()
-    private var productRequestCompletion: (([SKProduct])->())?
+    public var products: [SKProduct]?
+    private var productRequestCompletion: ((products: [SKProduct]?, error: NSError?)->())?
     
     private override init() {
         /* SBInAppPurchasing can only be created as a singleton. Use SBInAppPurchasing.sharedInstance :) */
@@ -39,7 +40,7 @@ let SBInAppPurchaseFailed = "SBInAppPurchaseFailed"
         return SKPaymentQueue.canMakePayments()
     }
     
-    public func requestProducts(productIdentifiers: Set<String>, completion: ([SKProduct]) -> ()){
+    public func requestProducts(productIdentifiers: Set<String>, completion: (products: [SKProduct]?, error: NSError?) -> ()){
         
         print("Requesting Products")
         
@@ -94,24 +95,19 @@ extension SBInAppPurchasing: SKProductsRequestDelegate {
         self.products = response.products
         
         // Call Completion handler
-        self.productRequestCompletion?(response.products)
+        self.productRequestCompletion?(products: response.products, error: nil)
+        self.productRequestCompletion = nil
         
     }
     
     public func request(request: SKRequest, didFailWithError error: NSError) {
         print("Failed to load list of products.")
         print("Error: \(error.localizedDescription)")
-        //productsRequestCompletionHandler?(success: false, products: nil)
-        clearRequestAndHandler()
+        self.productRequestCompletion?(products: nil, error: error)
     }
     
     public func requestDidFinish(request: SKRequest) {
         print("Request did finish")
-    }
-    
-    private func clearRequestAndHandler() {
-        productsRequest = nil
-        //productsRequestCompletionHandler = nil
     }
     
 }
@@ -149,10 +145,7 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
     
     private func restoreTransaction(transaction: SKPaymentTransaction) {
         
-        print("Transaction restored")
-       
         guard let productIdentifier = transaction.originalTransaction?.payment.productIdentifier else { return }
-        print("Transaction restored past guard")
 
         self.delegate?.purchaseRestored(transaction.payment.productIdentifier);
         postPurchaseNotificationWithIdentifier(productIdentifier, notificationName: SBInAppPurchaseRestored)
@@ -180,7 +173,11 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
 // MARK: - Logging
 
 extension SBInAppPurchasing{
+
     func print(string: String){
-        Swift.print("SBInAppPurchasing - \(string)")
+        
+        if self.debugLoggingEnabled {
+            Swift.print("SBInAppPurchasing - \(string)")
+        }
     }
 }
