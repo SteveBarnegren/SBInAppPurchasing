@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/cocoapods/l/SBInAppPurchasing.svg?style=flat)](http://cocoapods.org/pods/SBInAppPurchasing)
 [![Platform](https://img.shields.io/cocoapods/p/SBInAppPurchasing.svg?style=flat)](http://cocoapods.org/pods/SBInAppPurchasing)
 
-SBInAppPurchasing makes In App Purchasing easier. Written in Swift, Objective-C compatible.
+SBInAppPurchasing makes In-App Purchasing easier. Written in Swift, Objective-C compatible.
 
 **Features:**
 
