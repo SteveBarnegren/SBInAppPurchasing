@@ -9,9 +9,9 @@
 import Foundation
 import StoreKit
 
-let SBInAppPurchaseCompleted = "SBInAppPurchaseCompleted"
-let SBInAppPurchaseRestored = "SBInAppPurchaseRestored"
-let SBInAppPurchaseFailed = "SBInAppPurchaseFailed"
+public let SBInAppPurchaseCompletedNotification = "SBInAppPurchaseCompleted"
+public let SBInAppPurchaseRestoredNotification = "SBInAppPurchaseRestored"
+public let SBInAppPurchaseFailedNotification = "SBInAppPurchaseFailed"
 
 @objc public protocol SBInAppPurchasingDelegate {
     func purchaseCompleted(identifier: String)
@@ -139,7 +139,7 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
     private func completeTransaction(transaction: SKPaymentTransaction) {
 
         self.delegate?.purchaseCompleted(transaction.payment.productIdentifier);
-        postPurchaseNotificationWithIdentifier(transaction.payment.productIdentifier, notificationName: SBInAppPurchaseCompleted)
+        postPurchaseNotificationWithIdentifier(transaction.payment.productIdentifier, notificationName: SBInAppPurchaseCompletedNotification)
         SKPaymentQueue.defaultQueue().finishTransaction(transaction)
     }
     
@@ -148,7 +148,7 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
         guard let productIdentifier = transaction.originalTransaction?.payment.productIdentifier else { return }
 
         self.delegate?.purchaseRestored(transaction.payment.productIdentifier);
-        postPurchaseNotificationWithIdentifier(productIdentifier, notificationName: SBInAppPurchaseRestored)
+        postPurchaseNotificationWithIdentifier(productIdentifier, notificationName: SBInAppPurchaseRestoredNotification)
         SKPaymentQueue.defaultQueue().finishTransaction(transaction)
     }
     
@@ -160,7 +160,7 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
         
         self.delegate?.purchaseFailed(transaction.error?.localizedDescription ?? "Failed")
         SKPaymentQueue.defaultQueue().finishTransaction(transaction)
-        NSNotificationCenter.defaultCenter().postNotificationName(SBInAppPurchaseFailed, object: transaction.error)
+        NSNotificationCenter.defaultCenter().postNotificationName(SBInAppPurchaseFailedNotification, object: transaction.error)
     }
     
     private func postPurchaseNotificationWithIdentifier(identifier: String?, notificationName: String) {
