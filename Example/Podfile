@@ -1,6 +1,0 @@
-use_frameworks!
-target 'SBInAppPurchasing_Tests' do
-  pod 'SBInAppPurchasing', :path => '../'
-  
-  
-end
