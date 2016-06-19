@@ -5,7 +5,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'SBInAppPurchasing'
-  s.version          = '0.1.0'
+  s.version          = '0.1.1'
   s.summary          = 'Easy In-App Purchasing'
   s.description      = <<-DESC
 Make In-App Purchasing simpler! Purchase and restore IAPs with completion callbacks and notifications
