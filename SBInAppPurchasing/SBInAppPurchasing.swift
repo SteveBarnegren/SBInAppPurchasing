@@ -40,7 +40,7 @@ public let SBInAppPurchaseFailedNotification = "SBInAppPurchaseFailed"
         return SKPaymentQueue.canMakePayments()
     }
     
-    public func requestProducts(productIdentifiers: Set<String>, completion: (products: [SKProduct]?, error: NSError?) -> ()){
+    public func requestProducts(productIdentifiers: Set<String>, completion: ( (products: [SKProduct]?, error: NSError?) -> ())? ){
         
         print("Requesting Products")
         
