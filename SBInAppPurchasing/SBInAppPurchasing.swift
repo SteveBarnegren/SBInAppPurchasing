@@ -9,28 +9,21 @@
 import Foundation
 import StoreKit
 
-/*
- - No code should be commented out
- - Use the print function at the bottom
- - use NSNotificationName extension
- - Try and use some handlers?
- - Test everything
- */
-
 extension Notification.Name {
     static let inAppPurchaseCompleted = NSNotification.Name("SBInAppPurchaseCompleted")
     static let inAppPurchaseRestored = NSNotification.Name("SBInAppPurchaseRestored")
     static let inAppPurchaseFailed = NSNotification.Name("SBInAppPurchaseFailed")
 }
 
-@objc public protocol SBInAppPurchasingDelegate {
+public protocol SBInAppPurchasingDelegate {
     func purchaseCompleted(identifier: String)
     func purchaseRestored(identifier: String)
     func purchaseFailed(errorDescription: String)
 }
 
-@objc public class SBInAppPurchasing: NSObject {
+public class SBInAppPurchasing: NSObject {
     
+    // MARK: - Types
     public typealias ProductPurchaseHandler = (_ success: Bool) -> ()
     public typealias ProductRestoreHandler = (_ identifier: String) -> ()
 
@@ -39,7 +32,7 @@ extension Notification.Name {
     public var delegate: SBInAppPurchasingDelegate?
     public let debugLoggingEnabled = false
 
-    public func canMakePayments() -> Bool{
+    public var canMakePayments: Bool {
         return SKPaymentQueue.canMakePayments()
     }
     
@@ -56,7 +49,7 @@ extension Notification.Name {
         
     }
     
-    public func purchaseProduct(product: SKProduct, handler: @escaping ProductPurchaseHandler){
+    public func purchase(product: SKProduct, handler: @escaping ProductPurchaseHandler){
         
         print("Puchasing Product: \(product.productIdentifier)")
         
@@ -67,7 +60,7 @@ extension Notification.Name {
 
     }
     
-    public func purchaseProductWithIdentifier(identifier: String, handler: @escaping ProductPurchaseHandler){
+    public func purchase(productWithIdentifier identifier: String, handler: @escaping ProductPurchaseHandler){
     
         let payment = SKMutablePayment()
         payment.productIdentifier = identifier
@@ -76,7 +69,7 @@ extension Notification.Name {
         purchasehandlers[identifier] = handler
     }
     
-    public func restorePurchases(handler: @escaping ProductRestoreHandler) {
+    public func restorePurchases(_ handler: @escaping ProductRestoreHandler) {
         
         restoreHandler = handler
         SKPaymentQueue.default().restoreCompletedTransactions()
@@ -124,7 +117,6 @@ extension SBInAppPurchasing: SKProductsRequestDelegate {
         
     }
 
-    
     public func request(_ request: SKRequest, didFailWithError error: Error) {
         print("Failed to load list of products.")
         print("Error: \(error.localizedDescription)")
