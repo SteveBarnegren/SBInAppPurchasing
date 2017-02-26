@@ -9,9 +9,19 @@
 import Foundation
 import StoreKit
 
-public let SBInAppPurchaseCompletedNotification = "SBInAppPurchaseCompleted"
-public let SBInAppPurchaseRestoredNotification = "SBInAppPurchaseRestored"
-public let SBInAppPurchaseFailedNotification = "SBInAppPurchaseFailed"
+/*
+ - No code should be commented out
+ - Use the print function at the bottom
+ - use NSNotificationName extension
+ - Try and use some handlers?
+ - Test everything
+ */
+
+extension Notification.Name {
+    static let inAppPurchaseCompleted = NSNotification.Name("SBInAppPurchaseCompleted")
+    static let inAppPurchaseRestored = NSNotification.Name("SBInAppPurchaseRestored")
+    static let inAppPurchaseFailed = NSNotification.Name("SBInAppPurchaseFailed")
+}
 
 @objc public protocol SBInAppPurchasingDelegate {
     func purchaseCompleted(identifier: String)
@@ -21,26 +31,19 @@ public let SBInAppPurchaseFailedNotification = "SBInAppPurchaseFailed"
 
 @objc public class SBInAppPurchasing: NSObject {
     
-    public static let sharedInstance = SBInAppPurchasing()
-    public var delegate: SBInAppPurchasingDelegate?
-    public let debugLoggingEnabled = true
+    public typealias ProductPurchaseHandler = (_ success: Bool) -> ()
+    public typealias ProductRestoreHandler = (_ identifier: String) -> ()
 
-    private var productsRequest: SKProductsRequest?
-    public var products: [SKProduct]?
-    private var productRequestCompletion: ((products: [SKProduct]?, error: NSError?)->())?
-    
-    private override init() {
-        /* SBInAppPurchasing can only be created as a singleton. Use SBInAppPurchasing.sharedInstance :) */
-        
-        super.init()
-        SKPaymentQueue.defaultQueue().addTransactionObserver(self)
-    }
-    
+    // MARK: - Public
+    public static let shared = SBInAppPurchasing()
+    public var delegate: SBInAppPurchasingDelegate?
+    public let debugLoggingEnabled = false
+
     public func canMakePayments() -> Bool{
         return SKPaymentQueue.canMakePayments()
     }
     
-    public func requestProducts(productIdentifiers: Set<String>, completion: ( (products: [SKProduct]?, error: NSError?) -> ())? ){
+    public func requestProducts(productIdentifiers: Set<String>, completion: ( ([SKProduct]?, Error?) -> ())? ){
         
         print("Requesting Products")
         
@@ -53,32 +56,53 @@ public let SBInAppPurchaseFailedNotification = "SBInAppPurchaseFailed"
         
     }
     
-    public func purchaseProduct(product: SKProduct){
+    public func purchaseProduct(product: SKProduct, handler: @escaping ProductPurchaseHandler){
         
         print("Puchasing Product: \(product.productIdentifier)")
         
         let payment = SKPayment(product: product)
-        SKPaymentQueue.defaultQueue().addPayment(payment)
+        SKPaymentQueue.default().add(payment)
+        
+        purchasehandlers[product.productIdentifier] = handler
+
     }
     
-    public func purchaseProductWithIdentifier(identifier: String){
+    public func purchaseProductWithIdentifier(identifier: String, handler: @escaping ProductPurchaseHandler){
     
         let payment = SKMutablePayment()
         payment.productIdentifier = identifier
-        SKPaymentQueue.defaultQueue().addPayment(payment)
+        SKPaymentQueue.default().add(payment)
+        
+        purchasehandlers[identifier] = handler
     }
     
-    public func restorePurchases() {
-        SKPaymentQueue.defaultQueue().restoreCompletedTransactions()
+    public func restorePurchases(handler: @escaping ProductRestoreHandler) {
+        
+        restoreHandler = handler
+        SKPaymentQueue.default().restoreCompletedTransactions()
     }
+    
+    // MARK: - private
+    
+    private var productsRequest: SKProductsRequest?
+    public var products: [SKProduct]?
+    fileprivate var productRequestCompletion: (([SKProduct]?, Error?)->())?
+    fileprivate var purchasehandlers = [String : ProductPurchaseHandler]()
+    fileprivate var restoreHandler: ProductRestoreHandler?
 
+    private override init() {
+        /* SBInAppPurchasing can only be created as a singleton. Use SBInAppPurchasing.shared */
+        
+        super.init()
+        SKPaymentQueue.default().add(self)
+    }
 }
 
 // MARK: - SKProductsRequestDelegate
 
 extension SBInAppPurchasing: SKProductsRequestDelegate {
     
-    public func productsRequest(request: SKProductsRequest, didReceiveResponse response: SKProductsResponse) {
+    public func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
         print("Loaded list of products")
 
         // Print any invalid identifiers to the console
@@ -95,42 +119,42 @@ extension SBInAppPurchasing: SKProductsRequestDelegate {
         self.products = response.products
         
         // Call Completion handler
-        self.productRequestCompletion?(products: response.products, error: nil)
+        self.productRequestCompletion?(response.products, nil)
         self.productRequestCompletion = nil
         
     }
+
     
-    public func request(request: SKRequest, didFailWithError error: NSError) {
+    public func request(_ request: SKRequest, didFailWithError error: Error) {
         print("Failed to load list of products.")
         print("Error: \(error.localizedDescription)")
-        self.productRequestCompletion?(products: nil, error: error)
+        self.productRequestCompletion?(nil, error)
     }
     
-    public func requestDidFinish(request: SKRequest) {
+    public func requestDidFinish(_ request: SKRequest) {
         print("Request did finish")
     }
-    
 }
 
 // MARK: - SKPaymentTransactionObserver
 
 extension SBInAppPurchasing: SKPaymentTransactionObserver {
     
-    public func paymentQueue(queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+    public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
         for transaction in transactions {
             switch (transaction.transactionState) {
-            case .Purchased:
-                completeTransaction(transaction)
+            case .purchased:
+                completeTransaction(transaction: transaction)
                 break
-            case .Failed:
-                failedTransaction(transaction)
+            case .failed:
+                failedTransaction(transaction: transaction)
                 break
-            case .Restored:
-                restoreTransaction(transaction)
+            case .restored:
+                restoreTransaction(transaction: transaction)
                 break
-            case .Deferred:
+            case .deferred:
                 break
-            case .Purchasing:
+            case .purchasing:
                 break
             }
         }
@@ -138,43 +162,53 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
     
     private func completeTransaction(transaction: SKPaymentTransaction) {
 
-        self.delegate?.purchaseCompleted(transaction.payment.productIdentifier);
-        postPurchaseNotificationWithIdentifier(transaction.payment.productIdentifier, notificationName: SBInAppPurchaseCompletedNotification)
-        SKPaymentQueue.defaultQueue().finishTransaction(transaction)
+        self.delegate?.purchaseCompleted(identifier: transaction.payment.productIdentifier);
+        NotificationCenter.default.post(name: .inAppPurchaseCompleted, object: transaction.payment.productIdentifier)
+        
+        if let handler = purchasehandlers[transaction.payment.productIdentifier] {
+            handler(true)
+        }
+        
+        SKPaymentQueue.default().finishTransaction(transaction)
     }
     
     private func restoreTransaction(transaction: SKPaymentTransaction) {
         
-        guard let productIdentifier = transaction.originalTransaction?.payment.productIdentifier else { return }
-
-        self.delegate?.purchaseRestored(transaction.payment.productIdentifier);
-        postPurchaseNotificationWithIdentifier(productIdentifier, notificationName: SBInAppPurchaseRestoredNotification)
-        SKPaymentQueue.defaultQueue().finishTransaction(transaction)
+        guard let productIdentifier = transaction.original?.payment.productIdentifier else {
+            return
+        }
+        
+        self.delegate?.purchaseRestored(identifier: transaction.payment.productIdentifier);
+        NotificationCenter.default.post(name: .inAppPurchaseRestored, object: productIdentifier)
+        
+        restoreHandler?(productIdentifier)
+        
+        SKPaymentQueue.default().finishTransaction(transaction)
     }
     
     private func failedTransaction(transaction: SKPaymentTransaction) {
-        
-        if transaction.error!.code != SKErrorCode.PaymentCancelled.rawValue {
-            print("Transaction Error: \(transaction.error?.localizedDescription)")
+    
+        if let error = transaction.error {
+            print("Transaction Error: \(error.localizedDescription)")
         }
         
-        self.delegate?.purchaseFailed(transaction.error?.localizedDescription ?? "Failed")
-        SKPaymentQueue.defaultQueue().finishTransaction(transaction)
-        NSNotificationCenter.defaultCenter().postNotificationName(SBInAppPurchaseFailedNotification, object: transaction.error)
+        self.delegate?.purchaseFailed(errorDescription: transaction.error?.localizedDescription ?? "Failed")
+        NotificationCenter.default.post(name: .inAppPurchaseFailed, object: transaction.error)
+        
+        if let handler = purchasehandlers[transaction.payment.productIdentifier] {
+            handler(false)
+        }
+        
+        SKPaymentQueue.default().finishTransaction(transaction)
     }
     
-    private func postPurchaseNotificationWithIdentifier(identifier: String?, notificationName: String) {
-        
-        guard let identifier = identifier else { return }
-        NSNotificationCenter.defaultCenter().postNotificationName(notificationName, object: identifier)
-    }
 }
 
 // MARK: - Logging
 
 extension SBInAppPurchasing{
 
-    func print(string: String){
+    func print(_ string: String){
         
         if self.debugLoggingEnabled {
             Swift.print("SBInAppPurchasing - \(string)")
