@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/cocoapods/l/SBInAppPurchasing.svg?style=flat)](http://cocoapods.org/pods/SBInAppPurchasing)
 [![Platform](https://img.shields.io/cocoapods/p/SBInAppPurchasing.svg?style=flat)](http://cocoapods.org/pods/SBInAppPurchasing)
 
-SBInAppPurchasing makes In-App Purchasing easier. Written in Swift, Objective-C compatible.
+SBInAppPurchasing makes In-App Purchasing easier. Written in Swift.
 
 **Features:**
 
@@ -13,6 +13,8 @@ SBInAppPurchasing makes In-App Purchasing easier. Written in Swift, Objective-C 
 - Making purchases
 - Restoring Purchases
 - Callbacks and notifications
+
+Note that I haven't done any testing with Consumable IAPs at the current time.
 
 ## Installation
 
@@ -29,15 +31,15 @@ pod "SBInAppPurchasing"
 ```swift
 import SBInAppPurchasing
 
-let purchaser = SBInAppPurchasing.sharedInstance
+let purchaser = SBInAppPurchasing.shared
 ```
 
 ####To check if a device can make payments:
 
-Some devices make not be able to make payments, for not permitted by parental controls. You shoudl always check if the device can make payments before making a purchase
+Some devices make not be able to make payments, for instance, if not permitted by parental controls. You should always check if the device can make payments before making a purchase
 
 ```swift
-if (purchaser.canMakePayments()){
+if (purchaser.canMakePayments){
 	// Make a purchase
 }
 else{
@@ -73,7 +75,16 @@ purchaser.requestProducts(identifiers) { (products, error) in
 If you have called `requestProducts()` already, you can make a purchase using one of the returned products
 
 ```swift
-purchaser.purchaseProduct(product)
+purchaser.purchase(product: someProduct) {
+            (success: Bool) in
+            
+            if success {
+            	// Unlock IAP
+            }
+            else{
+	         	// Show error
+            }   
+}
 ```
 
 ####To make a purchase with identifier
@@ -81,12 +92,33 @@ purchaser.purchaseProduct(product)
 It is also possible to make a purchase without calling `requestProducts()` by using the product identifier
 
 ```swift
-purchaser.purchaseProductWithIdentifier("com.some.iap")
+purchaser.purchase(productWithIdentifier: "com.some.iap") {
+            (success: Bool) in
+            
+            if success {
+            		// Unlock IAP
+            }
+            else{
+            		// Show error
+            }   
+}
+```
+
+####To restore Purchases
+
+```swift
+SBInAppPurchasing.shared.restorePurchases {
+            (identifer: String) in
+            
+            if identifer == "com.some.iap" {
+                // Unlock IAP
+            }
+        }
 ```
 
 ####Delegate Callbacks
 
-An object implementing the `SBInAppPurchasingDelegate` protocol can recieve callbacks:
+Using the passed in closures is the easiest way to repond to purchase events, but an object implementing the `SBInAppPurchasingDelegate` protocol can recieve also receive callbacks for purchasing events, if required.  
 
 ```swift
 purchaser.delegate = someObject
@@ -102,9 +134,9 @@ func purchaseFailed(errorDescription: String)
 Alternatively, objects can listen to notifications via NSNotificationCenter
 
 ```swift
-NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(purchaseCompleted), name: SBInAppPurchaseCompletedNotification, object: nil)
-NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(purchaseCompleted), name: SBInAppPurchaseRestoredNotification, object: nil)
-NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(purchaseFailed), name: SBInAppPurchaseFailedNotification, object: nil)
+NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(purchaseCompleted), name: .inAppPurchaseCompleted, object: nil)
+NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(purchaseRestored), name: .inAppPurchaseRestored, object: nil)
+NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(purchaseFailed), name: .inAppPurchaseFailed, object: nil)
 
 func purchaseCompleted(notification: NSNotification){ 
 	let identifier = notification.object       
