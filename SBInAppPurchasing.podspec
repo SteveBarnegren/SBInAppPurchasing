@@ -5,7 +5,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'SBInAppPurchasing'
-  s.version          = '1.0.0'
+  s.version          = '1.1.0'
   s.summary          = 'Easy In-App Purchasing'
   s.description      = <<-DESC
 Make In-App Purchasing simpler! Purchase and restore IAPs with completion callbacks and notifications
@@ -19,6 +19,6 @@ Make In-App Purchasing simpler! Purchase and restore IAPs with completion callba
 
   s.ios.deployment_target = '10.0'
 
-  s.source_files = 'SBInAppPurchasing/**/*'
+  s.source_files = 'SBInAppPurchasing/SBInAppPurchasing/**/*.swift'
  
  end
