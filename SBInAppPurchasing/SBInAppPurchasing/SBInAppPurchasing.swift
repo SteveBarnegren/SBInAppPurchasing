@@ -15,7 +15,7 @@ extension Notification.Name {
     static let inAppPurchaseFailed = NSNotification.Name("SBInAppPurchaseFailed")
 }
 
-public protocol SBInAppPurchasingDelegate {
+public protocol SBInAppPurchasingDelegate: class {
     func purchaseCompleted(identifier: String)
     func purchaseRestored(identifier: String)
     func purchaseFailed(errorDescription: String)
@@ -24,32 +24,32 @@ public protocol SBInAppPurchasingDelegate {
 public class SBInAppPurchasing: NSObject {
     
     // MARK: - Types
-    public typealias ProductPurchaseHandler = (_ success: Bool) -> ()
-    public typealias ProductRestoreHandler = (_ identifier: String) -> ()
+    public typealias ProductPurchaseHandler = (_ success: Bool) -> Void
+    public typealias ProductRestoreHandler = (_ identifier: String) -> Void
 
     // MARK: - Public
     public static let shared = SBInAppPurchasing()
-    public var delegate: SBInAppPurchasingDelegate?
+    public weak var delegate: SBInAppPurchasingDelegate?
     public let debugLoggingEnabled = false
 
     public var canMakePayments: Bool {
         return SKPaymentQueue.canMakePayments()
     }
     
-    public func requestProducts(productIdentifiers: Set<String>, completion: ( ([SKProduct]?, Error?) -> ())? ){
+    public func requestProducts(productIdentifiers: Set<String>, completion: ( ([SKProduct]?, Error?) -> Void)? ) {
         
         print("Requesting Products")
         
-        productsRequest?.cancel();
+        productsRequest?.cancel()
         
         productRequestCompletion = completion
-        productsRequest = SKProductsRequest(productIdentifiers: productIdentifiers);
-        productsRequest?.delegate = self;
+        productsRequest = SKProductsRequest(productIdentifiers: productIdentifiers)
+        productsRequest?.delegate = self
         productsRequest?.start()
         
     }
     
-    public func purchase(product: SKProduct, handler: @escaping ProductPurchaseHandler){
+    public func purchase(product: SKProduct, handler: @escaping ProductPurchaseHandler) {
         
         print("Puchasing Product: \(product.productIdentifier)")
         
@@ -60,7 +60,7 @@ public class SBInAppPurchasing: NSObject {
 
     }
     
-    public func purchase(productWithIdentifier identifier: String, handler: @escaping ProductPurchaseHandler){
+    public func purchase(productWithIdentifier identifier: String, handler: @escaping ProductPurchaseHandler) {
     
         let payment = SKMutablePayment()
         payment.productIdentifier = identifier
@@ -79,8 +79,8 @@ public class SBInAppPurchasing: NSObject {
     
     private var productsRequest: SKProductsRequest?
     public var products: [SKProduct]?
-    fileprivate var productRequestCompletion: (([SKProduct]?, Error?)->())?
-    fileprivate var purchasehandlers = [String : ProductPurchaseHandler]()
+    fileprivate var productRequestCompletion: (([SKProduct]?, Error?) -> Void)?
+    fileprivate var purchasehandlers = [String: ProductPurchaseHandler]()
     fileprivate var restoreHandler: ProductRestoreHandler?
 
     private override init() {
@@ -134,16 +134,13 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
     
     public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
         for transaction in transactions {
-            switch (transaction.transactionState) {
+            switch transaction.transactionState {
             case .purchased:
                 completeTransaction(transaction: transaction)
-                break
             case .failed:
                 failedTransaction(transaction: transaction)
-                break
             case .restored:
                 restoreTransaction(transaction: transaction)
-                break
             case .deferred:
                 break
             case .purchasing:
@@ -154,7 +151,7 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
     
     private func completeTransaction(transaction: SKPaymentTransaction) {
 
-        self.delegate?.purchaseCompleted(identifier: transaction.payment.productIdentifier);
+        self.delegate?.purchaseCompleted(identifier: transaction.payment.productIdentifier)
         NotificationCenter.default.post(name: .inAppPurchaseCompleted, object: transaction.payment.productIdentifier)
         
         if let handler = purchasehandlers[transaction.payment.productIdentifier] {
@@ -170,7 +167,7 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
             return
         }
         
-        self.delegate?.purchaseRestored(identifier: transaction.payment.productIdentifier);
+        self.delegate?.purchaseRestored(identifier: transaction.payment.productIdentifier)
         NotificationCenter.default.post(name: .inAppPurchaseRestored, object: productIdentifier)
         
         restoreHandler?(productIdentifier)
@@ -198,9 +195,9 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
 
 // MARK: - Logging
 
-extension SBInAppPurchasing{
+extension SBInAppPurchasing {
 
-    func print(_ string: String){
+    func print(_ string: String) {
         
         if self.debugLoggingEnabled {
             Swift.print("SBInAppPurchasing - \(string)")
