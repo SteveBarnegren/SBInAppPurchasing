@@ -6,6 +6,8 @@
 //  Copyright © 2016 Steve Barnegren. All rights reserved.
 //
 
+//swiftlint:disable identifier_name
+
 import Foundation
 import StoreKit
 
