@@ -147,6 +147,8 @@ extension SBInAppPurchasing: SKPaymentTransactionObserver {
                 break
             case .purchasing:
                 break
+            @unknown default:
+                break
             }
         }
     }
